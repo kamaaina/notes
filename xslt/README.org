@@ -1,0 +1,155 @@
+#+title: xsl notes
+#+STARTUP: showeverything
+
+* Table of Contents :toc:
+- [[#description][Description]]
+- [[#pre-requisites][Pre-requisites]]
+- [[#transformation-example][Transformation Example]]
+  - [[#example-xml-file][Example xml file]]
+  - [[#transform][Transform]]
+  - [[#breif-explanation][Breif Explanation]]
+- [[#another-example][Another Example]]
+  - [[#xml][XML]]
+  - [[#transformation][Transformation]]
+- [[#execution][Execution]]
+
+* Description
+
+Sometime it is necessary to modify an xml document and while tools like sed and awk are available, it is not always the best option. Extensible stylesheet language (xsl) is the better choice for the job.
+
+It is always better to use an XSLT processor like xsltproc to handle XML files than using sed or awk.
+
+* Pre-requisites
+
+xsltproc needs to be installed (typically provided by the xslt package)
+
+#+begin_example
+sudo pacman -S libxslt
+sudo yum install libxslt
+sudo apt install xsltproc
+#+end_example
+
+* Transformation Example
+
+The skies the limit on what you can do, but here is an example of how to comment out a node
+
+** Example xml file
+
+#+begin_src xml :tangle "./target.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<Context antiResourceLocking="false" privileged="true" >
+<!--
+  <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+         allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />
+-->
+  <Manager sessionAttributeValueClassNameFilter="java\.lang\.(?:Boolean|Integer|Long|Number|String)|org\.apache\.catalina\.filters\.CsrfPreventionFilter\$LruCache(?:\$1)?|java\.util\.(?:Linked)?HashMap"/>
+</Context>
+#+end_src
+
+** Transform
+
+#+begin_src xml :tangle "./transform.xsl"
+<?xml version="1.0"?>
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+
+  <xsl:template match="/|node()|@*">
+    <xsl:copy>
+      <xsl:apply-templates select="node()|@*"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="/Context/Valve">
+    <xsl:text disable-output-escaping="yes">&lt;!-- </xsl:text>
+    <xsl:copy-of select="."/>
+    <xsl:text disable-output-escaping="yes"> --&gt;</xsl:text>
+  </xsl:template>
+
+</xsl:transform>
+#+end_src
+
+** Breif Explanation
+
+The first template is just an identity transformation, while the second template inserts <!-- and --> around the /Context/Valve node.
+
+If you need to match the exact values of the attributes in the node, then do so with a more specific XPath query in the match of the second template:
+
+#+begin_src xml
+<xsl:template match="/Context/Valve[
+      @className='org.apache.catalina.valves.RemoteAddrValve' and
+      @allow='127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1'
+]">
+#+end_src
+
+* Another Example
+
+** XML
+
+#+begin_src xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="test">
+    <types>
+        <name>abc</name>
+        <members>abc_member_1</members>
+        <members>abc_member_2</members>
+    </types>
+    <types>
+        <name>def</name>
+        <members>def_member_1</members>
+        <members>def_member_2</members>
+        <members>def_member_3</members>
+    </types>
+    <types>
+        <name>xyz</name>
+        <members>xyz_member_1</members>
+    </types>
+    <version>1.0</version>
+    <fullName>test</fullName>
+<Package>
+#+end_src
+
+** Transformation
+
+#+begin_src xml
+<?xml version='1.0' encoding='UTF-8'?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:tst="test">
+<xsl:output method="xml" encoding="UTF-8" indent="yes" />
+<xsl:strip-space elements="*" />
+
+    <!-- Identity template -->
+    <xsl:template match="node()|@*">
+        <xsl:copy>
+            <xsl:apply-templates select="node()|@*" />
+        </xsl:copy>
+    </xsl:template>
+
+    <xsl:template match="tst:types[tst:name='xyz']">
+        <xsl:text disable-output-escaping="yes">&lt;!--</xsl:text>
+            <xsl:copy-of select="." />
+        <xsl:text disable-output-escaping="yes">--></xsl:text>
+    </xsl:template>
+
+
+</xsl:stylesheet>
+#+end_src
+
+* Execution
+
+Tangle this file and run the following:
+
+#+begin_example
+xsltproc transform.xsl target.xml | bat -n
+#+end_example

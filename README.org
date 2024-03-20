@@ -1,0 +1,5 @@
+#+title: Notes
+#+AUTHOR: mike
+#+STARTUP: showeverything
+
+some random notes about stuff
