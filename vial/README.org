@@ -1,0 +1,43 @@
+#+title: Vial Notes
+#+STARTUP: showeverything
+#+STARTUP: inlineimages
+
+* Table of Contents :toc:
+- [[#description][Description]]
+- [[#macros][Macros]]
+  - [[#type-email-address][Type email address]]
+  - [[#save-buffer-in-vim][Save Buffer in vim]]
+
+* Description
+
+Helpful hints and configuration for vial
+
+* Macros
+
+** Type email address
+
+Toggle on with C-c C-x C-v (org-toggle-inline-images)
+
+#+CAPTION: Vial macro to type out email address
+
+[[./images/vial-email.png]]
+
+*** Code
+The same can be accomplished in code
+
+#+begin_src cpp
+// TODO
+#+end_src
+
+** Save Buffer in vim
+
+#+CAPTION: Vial macro to save a buffer in vim
+
+[[./images/vial-vim-save.png]]
+
+*** Code
+The same can be accomplished in code
+
+#+begin_src cpp
+// TODO
+#+end_src
