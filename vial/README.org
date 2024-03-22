@@ -33,7 +33,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case M_EMAIL:
            SEND_STRING_DELAY("foo", 20);
            SEND_STRING_DELAY(SS_DOWN(X_LSFT) SS_TAP(X_2), 20);
-           SEND_STRING_DELAY(SS_UP(X_LSFT) SS_TAP(X_2), 20);
+           SEND_STRING_DELAY(SS_UP(X_LSFT), 20);
            SEND_STRING("gmail.com");
            return false;
      }
@@ -59,7 +59,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case M_VIM_SAVE:
            SEND_STRING_DELAY(SS_TAP(X_ESC), 20);
            SEND_STRING_DELAY(SS_DOWN(X_LSFT) SS_TAP(X_SCLN), 20);
-           SEND_STRING_DELAY(SS_UP(X_LSFT) SS_TAP(X_SCLN), 20);
+           SEND_STRING_DELAY(SS_UP(X_LSFT), 20);
            SEND_STRING(SS_TAP(X_W));
            SEND_STRING(SS_TAP(X_ENTER));
            return false;
