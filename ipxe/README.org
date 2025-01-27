@@ -1,0 +1,192 @@
+#+title: ipxe notes
+#+STARTUP: showeverything
+
+* Table of Contents :toc:
+- [[#description][Description]]
+  - [[#compile-ipxe-and-wimboot][Compile ipxe and wimboot]]
+  - [[#create-a-webserver][Create a webserver]]
+- [[#setup-environment][Setup Environment]]
+  - [[#directory-setup][Directory Setup]]
+  - [[#windows-boot-files][Windows boot files]]
+  - [[#link-boot-files][Link boot files]]
+  - [[#install-http-server][Install http Server]]
+  - [[#install-tftp-server][Install tftp server]]
+  - [[#cronjobs][Cronjobs]]
+  - [[#menuipxe][menu.ipxe]]
+
+* Description
+
+How to build and PXE (preboot execution environment) server so we can kickstart both windows and linux. Windows will use MDT and be chain loaded from ipxe
+
+** Compile ipxe and wimboot
+
+1. Create a rocky 9 VM
+2. install build tools needed for ipxe compilation
+
+   #+begin_src bash
+   sudo dnf -y groupinstall "Development Tools"   # for ipxe
+   sudo dnf -y install 'perl(FindBin)'            # for ipxe
+   sudo dnf -y install golang                     # for lm http_server
+   #+end_src
+
+3. clone ipxe git repo
+
+   #+begin_src bash
+   git clone https://github.com/ipxe/ipxe.git
+   #+end_src
+
+   Note: version is 1.21.1, but that is very misleading. From looking at their commit history, they seem to track it by git commit id. this makes sense now as the current ipxe we had stood up was version 1.21.1 but from 4 years ago and there have been a ton of changes since!
+
+   #+begin_src bash
+   git log v1.21.1..HEAD --oneline
+   #+end_src
+
+4. build ipxe; only build what we need
+
+   #+begin_src bash
+   cd ipxe/src
+   make bin-x86_64-efi/ipxe.efi
+   make bin/undionly.kpxe
+   #+end_src
+
+5. clone wimboot git repo
+
+   #+begin_src bash
+   cd
+   git clone https://github.com/ipxe/wimboot.git
+   #+end_src
+
+6. build wimboot
+
+   #+begin_src bash
+   cd wimboot/src
+   make
+   #+end_src
+
+** Create a webserver
+
+While we could use the built-in python webserver, but that is not performant and should only be used for testing and development; not in production. plus, that is a good excuse for me to do some programming!
+
+*** create a file called http_server.go with the following contents
+
+#+begin_src go
+package main
+
+import (
+        "flag"
+        "log"
+        "net/http"
+        "strconv"
+)
+
+func main() {
+        port := flag.Int("p", 80, "port to serve on")
+        directory := flag.String("d", ".", "the directory of static files to host")
+        flag.Parse()
+
+        http.Handle("/", http.FileServer(http.Dir(*directory)))
+
+        strPort := strconv.Itoa(*port)
+        log.Fatal(http.ListenAndServe(":"+strPort, nil))
+}
+#+end_src
+
+*** build the binary
+
+Compile
+
+#+begin_src bash
+go build http_server.go
+#+end_src
+
+Example of how to use it
+
+#+begin_example
+./http_server -d /path/to/your/directory -p 80
+#+end_example
+
+
+* Setup Environment
+
+Setup our environment so we can PXE
+
+** Directory Setup
+
+As root run the following:
+
+#+begin_src bash
+mkdir -p /opt/http/boot/server2025
+mkdir -p /opt/tftp
+cp ~/wimboot/src/wimboot .
+ln -s /opt/wimboot /opt/http/wimboot
+ln -s /opt/wimboot /opt/tftp/wimboot
+cp ~/ipxe/src/bin-x86_64-efi/ipxe.efi /opt/tftp
+cp ~/ipxe/src/bin/undionly.kpxe /opt/tftp
+#+end_src
+
+** Windows boot files
+
+From the windows server 2025 iso copy the following files
+
+#+begin_src
+boot/bcd          =>  /opt/http/boot/server2025
+boot/boot.sdi     =>  /opt/http/boot/server2025
+sources/boot.wim  =>  /opt/http/boot/server2025
+#+end_src
+
+** Link boot files
+
+Currently using the evaluation version, but waiting fro the real ISO and will replace the above files if they are different
+
+#+begin_src bash
+ln -s /opt/http/boot/server2025 /opt/http/BCD
+ln -s /opt/http/boot/server2025 /opt/http/boot.sdi
+ln -s /opt/http/boot/server2025 /opt/http/boot.wim
+#+end_src
+
+** Install http Server
+
+Install the http server we created
+
+#+begin_src bash
+cp http_server /usr/local/bin
+#+end_src
+
+Create a script (/opt/http/lm-http.server.sh) that launches
+
+#+begin_src bash
+#!/bin/bash
+
+/usr/local/bin/http_server -d /opt/http
+#+end_src
+
+** Install tftp server
+
+Install via pip
+
+#+begin_src bash
+pip install py3tftp
+#+end_src
+
+Create a script (/opt/tftp/lm-py3tftp.sh) that launches it
+
+#+begin_src bash
+#!/bin/bash
+
+#This script starts up a tftp server used to server the ipxe.efi and wimboot files for F12'ing.
+cd /opt/tftp/
+/usr/local/bin/py3tftp -p 69
+#+end_src
+
+** Cronjobs
+
+Add the following cronjobs
+
+#+begin_src bash
+@reboot /opt/http/lm-http.server.sh
+@reboot /opt/tftp/lm-py3tftp.sh
+#+end_src
+
+** menu.ipxe
+
+Copy over the old menu.ipxe from old server to new one (/opt/http/menu.ipxe)
