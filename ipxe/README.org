@@ -27,6 +27,7 @@ How to build and PXE (preboot execution environment) server so we can kickstart 
    sudo dnf -y groupinstall "Development Tools"   # for ipxe
    sudo dnf -y install 'perl(FindBin)'            # for ipxe
    sudo dnf -y install golang                     # for lm http_server
+   sudo dnf -y install xz-devel                   # for lzma.h to compile undionly.kpxe
    #+end_src
 
 3. clone ipxe git repo
