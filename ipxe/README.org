@@ -91,6 +91,72 @@ func main() {
 }
 #+end_src
 
+if you need/want a case insensitive version use this, but you will need to install gorilla mux to build
+
+#+begin_src go
+package main
+
+import (
+        "flag"
+        "log"
+        "net/http"
+        "os"
+        "path/filepath"
+        "strconv"
+        "strings"
+
+        "github.com/gorilla/mux"
+)
+
+type CaseInsensitiveFileSystem struct {
+        fs http.FileSystem
+}
+
+func (cifs CaseInsensitiveFileSystem) Open(name string) (http.File, error) {
+        lowerName := strings.ToLower(name)
+
+        // try file "as is" first
+        f, err := cifs.fs.Open(name)
+        if err == nil {
+                return f, nil
+        }
+
+        // if "as is" open fails, walk the directory to find a case insensitive match
+        dir, file := filepath.Split(lowerName)
+        dirFile, err := cifs.fs.Open(dir)
+        if err != nil {
+                return nil, err
+        }
+        defer dirFile.Close()
+
+        fis, err := dirFile.Readdir(-1)
+        if err != nil {
+                return nil, err
+        }
+
+        for _, fi := range fis {
+                if strings.ToLower(fi.Name()) == file {
+                        return cifs.fs.Open(filepath.Join(dir, fi.Name()))
+                }
+        }
+
+        return nil, os.ErrNotExist
+}
+
+func main() {
+        port := flag.Int("p", 80, "port to serve on")
+        directory := flag.String("d", ".", "the directory of static files to host")
+        flag.Parse()
+        strPort := strconv.Itoa(*port)
+        router := mux.NewRouter()
+
+        fileServer := http.FileServer(CaseInsensitiveFileSystem{http.Dir(*directory)})
+        router.PathPrefix("/").Handler(fileServer)
+
+        log.Fatal(http.ListenAndServe(":"+strPort, router))
+}
+#+end_src
+
 *** build the binary
 
 Compile
