@@ -41,7 +41,14 @@ How to build and PXE (preboot execution environment) server so we can kickstart 
    git log v1.21.1..HEAD --oneline
    #+end_src
 
-4. build ipxe; only build what we need
+4. as of the time of this writing, i am using commit hash of c2f21a21
+   [[../images/ipxe-commit.jpg]]
+   
+   #+begin_src bash
+   git checkout c2f21a21
+   #+end_src
+   
+5. build ipxe; only build what we need
 
    #+begin_src bash
    cd ipxe/src
@@ -49,14 +56,14 @@ How to build and PXE (preboot execution environment) server so we can kickstart 
    make bin/undionly.kpxe
    #+end_src
 
-5. clone wimboot git repo
+6. clone wimboot git repo
 
    #+begin_src bash
    cd
    git clone https://github.com/ipxe/wimboot.git
    #+end_src
 
-6. build wimboot
+7. build wimboot
 
    #+begin_src bash
    cd wimboot/src
