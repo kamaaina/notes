@@ -54,6 +54,7 @@ How to build and PXE (preboot execution environment) server so we can kickstart 
    cd ipxe/src
    make bin-x86_64-efi/ipxe.efi
    make bin/undionly.kpxe
+   make bin-x86_64-efi/snponly.efi
    #+end_src
 
 6. clone wimboot git repo
@@ -194,6 +195,7 @@ cp ~/wimboot/src/wimboot .
 ln -s /opt/wimboot /opt/http/wimboot
 ln -s /opt/wimboot /opt/tftp/wimboot
 cp ~/ipxe/src/bin-x86_64-efi/ipxe.efi /opt/tftp
+# if this does not work (old hw), symlink the ipxe.efi to snponly.efi
 cp ~/ipxe/src/bin/undionly.kpxe /opt/tftp
 #+end_src
 
